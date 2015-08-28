@@ -26,7 +26,7 @@ import argparse
 from eeschema import SchemaLib, Component, Pin
 
 parser = argparse.ArgumentParser(
-    prog = "tabletokicad"
+    prog = "csvtokicad"
 )
 
 parser.add_argument(

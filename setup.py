@@ -6,7 +6,7 @@ setup(
     name = "python-eeschema",
     version = "0.1",
     packages = ["eeschema"],
-    scripts = ["bin/tabletokicad"],
+    scripts = ["bin/csvtokicad"],
     description = "Python library for manipulating KiCad's EESchema library files",
     author = "Josef Gajdusek",
     author_email = "atx@atx.name",
