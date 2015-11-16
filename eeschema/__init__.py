@@ -58,15 +58,17 @@ class Component:
     drawpinnumber -- display pin numbers (default True)
     drawpinname -- display pin names (default True)
     aliases -- list of aliases to use (default [])
+    nparts -- amount of parts (default 1)
     """
 
     def __init__(self, name, reference = "U", drawpinnumber = True,
-            drawpinname = True, aliases = []):
+            drawpinname = True, aliases = [], nparts = 1):
         self.name = name
         self.reference = reference
         self.drawpinnumber = drawpinnumber
         self.drawpinname = drawpinname
         self.aliases = aliases
+        self.nparts = nparts
         self.fields = {}
 
         for f in [Field(0, reference), Field(1, name),
@@ -90,9 +92,10 @@ class Component:
 
     def to_lib(self):
         """Returns this component in KiCad .lib format"""
-        ret = "DEF %s %s 0 40 %s %s 1 F N\n" % (self.name, self.reference,
+        ret = "DEF %s %s 0 40 %s %s %d F N\n" % (self.name, self.reference,
                 ("Y" if self.drawpinnumber else "N"),
-                ("Y" if self.drawpinname else "N"))
+                ("Y" if self.drawpinname else "N"),
+                self.nparts)
         if self.aliases:
             ret += "ALIAS " + " ".join(self.aliases) + "\n"
 
@@ -172,6 +175,7 @@ class Pin:
     orientation -- orientation of the pin (default Pin.RIGHT)
     size_num -- size of the pin number (default 50)
     size_name -- size of the pin name (default 50)
+    part -- part number (default 0)
     """
 
     UP = "U"
@@ -180,7 +184,7 @@ class Pin:
     LEFT = "L"
 
     def __init__(self, name, number, x = 0, y = 0, length = 100,
-            orientation = RIGHT, size_num = 50, size_name = 50):
+            orientation = RIGHT, size_num = 50, size_name = 50, part = 0):
         self.name = name
         self.number = number
         self.x = x
@@ -189,12 +193,13 @@ class Pin:
         self.orientation = orientation
         self.size_num = size_num
         self.size_name = size_name
+        self.part = part
 
     def to_lib(self):
         """Returns this pin in KiCad .lib format"""
-        return "X %s %s %d %d %d %s %d %d 0 0 I" % \
+        return "X %s %s %d %d %d %s %d %d %d 0 I" % \
                 (self.name, str(self.number), self.x, self.y, self.length,
-                        self.orientation, self.size_num, self.size_name)
+                        self.orientation, self.size_num, self.size_name, self.part)
 
 
 class Graphic:
@@ -203,16 +208,18 @@ class Graphic:
     BG = "f"
     NONE = "N"
 
-    def __init__(self, thickness = 0, fill = NONE):
+    def __init__(self, thickness = 0, fill = NONE, part = 0):
         self.thickness = thickness
         self.fill = fill
+        self.part = part
 
 
 class Arc(Graphic):
 
     def __init__(self, x, y, radius, start_angle, end_angle,
-            start_x, start_y, end_x, end_y, thickness = 0, fill = Graphic.NONE):
-        super(Arc, self).__init__(thickness = thickness, fill = fill)
+            start_x, start_y, end_x, end_y, thickness = 0, fill = Graphic.NONE,
+            part = 0):
+        super(Arc, self).__init__(thickness = thickness, fill = fill, part = part)
         self.x = x
         self.y = y
         self.radius = radius
@@ -225,35 +232,35 @@ class Arc(Graphic):
 
     def to_lib(self):
         """Returns this Arc in KiCad .lib format"""
-        return "A %d %d %d %d %d 0 1 %d %s %d %d %d %d" % \
+        return "A %d %d %d %d %d %d 1 %d %s %d %d %d %d" % \
                 (self.x, self.y, self.radius, self.start_angle, self.end_angle,
-                        self.thickness, self.fill, self.start_x, self.start_y,
+                        self.thickness, self.part, self.fill, self.start_x, self.start_y,
                         self.end_x, self.end_y)
 
 
 class Circle(Graphic):
 
-    def __init__(self, x, y, radius, thickness = 0, fill = Graphic.NONE):
-        super(Circle, self).__init__(thickness = thickness, fill = fill)
+    def __init__(self, x, y, radius, thickness = 0, fill = Graphic.NONE, part = 0):
+        super(Circle, self).__init__(thickness = thickness, fill = fill, part = part)
         self.x = x
         self.y = y
         self.radius = radius
 
     def to_lib(self):
         """Returns this Circle in KiCad .lib format"""
-        return "C %d %d %d 0 1 %d %s" % (self.x, self.y, self.radius, self.thickness,
-                self.fill)
+        return "C %d %d %d %d 1 %d %s" % (self.x, self.y, self.radius, self.part,
+                self.thickness, self.fill)
 
 
 class Polyline(Graphic):
 
-    def __init__(self, points, thickness = 0, fill = Graphic.NONE):
-        super(Polyline, self).__init__(thickness = thickness, fill = fill)
+    def __init__(self, points, thickness = 0, fill = Graphic.NONE, part = 0):
+        super(Polyline, self).__init__(thickness = thickness, fill = fill, part = part)
         self.points = points
 
     def to_lib(self):
         """Returns this Polyline in KiCad .lib format"""
-        ret = "P %d 0 1 %d " % (len(self.points), self.thickness)
+        ret = "P %d %d 1 %d " % (len(self.points), self.part, self.thickness)
         for p in self.points:
             ret += "%d %d " % (p[0], p[1])
         ret += "%s" % self.fill
@@ -271,8 +278,8 @@ class Rectangle(Graphic):
 
     def to_lib(self):
         """Returns this Rectangle in KiCad .lib format"""
-        return "S %d %d %d %d 0 1 %d %s" % (self.start_x, self.start_y,
-                self.end_x, self.end_y, self.thickness, self.fill)
+        return "S %d %d %d %d %d 1 %d %s" % (self.start_x, self.start_y,
+                self.end_x, self.end_y, self.part, self.thickness, self.fill)
 
 
 class Text(Graphic):
@@ -288,7 +295,8 @@ class Text(Graphic):
 
     def __init__(self, x, y, text, direction = HORIZONTAL, size = 60,
             italic = False, bold = False,
-            hjustify = CENTER, vjustify = CENTER):
+            hjustify = CENTER, vjustify = CENTER, part = 0):
+        super(Text, self).__init__(thickiness = 0, fill = Graphic.NONE, part = part)
         self.x = x
         self.y = y
         self.text = text
@@ -300,7 +308,7 @@ class Text(Graphic):
         self.vjustify = vjustify
 
     def to_lib(self):
-        return "T %d %d %d %d 0 0 1 %s %s %s %s %s" % (self.direction, self.x, self.y,
-                self.size, self.text.replace(" ", "~"),
+        return "T %d %d %d %d %d 0 1 %s %s %s %s %s" % (self.direction, self.x, self.y,
+                self.size, self.part, self.text.replace(" ", "~"),
                 "Italic" if self.italic else "Normal", "0" if self.bold else "1",
                 self.hjustify, self.vjustify)
